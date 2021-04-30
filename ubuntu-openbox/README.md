@@ -7,7 +7,7 @@ This container wraps a tigerVNC server internally and exposes an ephemeral port 
 This image is built using singularity (tested on 3.5)
 
 ```bash
-git clone https://code.vt.edu/bsandbro/singularity-vnc-containers.git
+git clone git@code.vt.edu:bsandbro/singularity-vnc-containers.git
 cd singularity-vnc-containers/ubuntu-openbox
 sudo singularity build ubuntu-openbox.sif image.def
 ```
