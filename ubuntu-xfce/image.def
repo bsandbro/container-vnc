@@ -1,0 +1,105 @@
+Bootstrap: library
+From: ubuntu:20.04
+Stage: build
+
+%setup
+mkdir -p ${SINGULARITY_ROOTFS}/opt
+cd ${SINGULARITY_ROOTFS}/opt
+git clone https://github.com/delta9000/websockify.git
+cd websockify
+git checkout port_file_feature
+cd ${SINGULARITY_ROOTFS}/opt
+wget https://github.com/novnc/noVNC/archive/refs/tags/v1.2.0.tar.gz
+tar xvf v1.2.0.tar.gz
+
+%files
+    services.conf 
+    supervisor.conf 
+
+%environment
+    export LC_ALL=C
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+    echo deb http://us.archive.ubuntu.com/ubuntu focal universe >> /etc/apt/sources.list
+    #base
+    apt-get update && apt-get install --no-install-recommends -y ca-certificates python3 python3-setuptools tigervnc-standalone-server openbox supervisor ssh xauth tigervnc-common xxd xterm wget uuid-runtime
+    #xfce dependencies from https://github.com/mviereck/dockerfile-x11docker-xfce/blob/master/Dockerfile
+    apt-get install -y --no-install-recommends \
+      dbus-x11 \
+      psmisc \
+      xdg-utils \
+      x11-xserver-utils \
+      x11-utils \
+      xfce4 \
+      libgtk-3-bin \
+      mousepad \
+      xfce4-notifyd \
+      xfce4-taskmanager \
+      xfce4-terminal \
+      xfce4-clipman-plugin \
+      xfce4-datetime-plugin \
+      xfce4-indicator-plugin \
+      xfce4-timer-plugin \
+      xfce4-whiskermenu-plugin \
+      xubuntu-artwork \
+      xubuntu-icon-theme \
+      libxv1 
+    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+    apt install -y ./google-chrome-stable_current_amd64.deb
+    cd /opt/websockify
+    python3 setup.py install
+    BUULD_DATE=`date`
+    echo "export BUILD_DATE=\"${NOW}\"" >> $SINGULARITY_ENVIRONMENT
+    mv /services.conf /etc/supervisor/conf.d/services.conf
+    mv /supervisor.conf /etc/supervisor/supervisord.conf
+
+%runscript
+    #!/bin/bash
+    function ctrl_c() {
+        [[ -f /tmp/$INSTANCE_ID/supervisord.pid ]] || kill -s SIGINT $(cat /tmp/supervisord.pid)
+        kill $$
+    }
+    [[ ! -z "${PASSWORD}" ]] || export PASSWORD=password 
+    [[ ! -z "${INSTANCE_ID}" ]] || export INSTANCE_ID=$(uuidgen) 
+    trap ctrl_c INT
+    mkdir /tmp/$INSTANCE_ID
+    export XAUTHORITY=/tmp/$INSTANCE_ID/.Xauthority
+    export XDG_CONFIG_HOME="/tmp/$INSTANCE_ID"
+    export XDG_CACHE_HOME="/tmp/$INSTANCE_ID"
+    touch /tmp/$INSTANCE_ID/.Xauthority
+    
+    bash -c 'printf "%s\n%s\n\n" $PASSWORD $PASSWORD | vncpasswd /tmp/$INSTANCE_ID/.vncpasswd'  &> /dev/null
+    chmod 600 /tmp/$INSTANCE_ID/.vncpasswd
+    supervisord -n &> /dev/null &
+    while [ ! -e /tmp/$INSTANCE_ID/supervisor.sock ]; do sleep 1; done
+    supervisorctl start Xvnc
+    export DISPLAY_NUM=$(cat /tmp/$INSTANCE_ID/.Xdisplaynum | tr -d '\n')
+    while [ ! -e /tmp/$INSTANCE_ID/.vncsocket ]; do sleep 1; done
+    chmod 600 /tmp/.X11-unix/X$DISPLAY_NUM && chmod 600 /tmp/$INSTANCE_ID/.vncsocket
+    supervisorctl start websockify
+    sleep 1
+    supervisorctl start xfce
+    sleep 1
+    # [[ -z "${HOST_X_COMMAND}" ]] || supervisorctl start host_x_command
+    sleep 5
+    printf "Connect to http://localhost:%s/vnc.html?autoconnect=true&password=%s&resize=remote\n\n" `cat /tmp/$INSTANCE_ID/.novncport` $PASSWORD
+    printf "Waiting for supervisord to exit \nkill -s SIGINT %s to stop services gracefully, close the windowmanager in the vnc session, or CTRL+C in this terminal\n" $(cat /tmp/$INSTANCE_ID/supervisord.pid)
+    wait $(cat /tmp/$INSTANCE_ID/supervisord.pid)
+    rm /tmp/.X11-unix/X$DISPLAY_NUM 
+
+%test
+    grep -q NAME=\"Ubuntu\" /etc/os-release
+    if [ $? -eq 0 ]; then
+        echo "Container base is Ubuntu as expected."
+    else
+        echo "Container base is not Ubuntu."
+    fi
+
+%labels
+    Author bsandbro@vt.edu
+    Version v0.0.1
+
+%help
+    This container wraps an Xvnc server with an openbox window manager and exposes 
+    a noVNC server on a random ephemeral port

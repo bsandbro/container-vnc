@@ -1,0 +1,20 @@
+[program:Xvnc]
+command=bash -c 'exec 6<> /tmp/%(ENV_INSTANCE_ID)s/.Xdisplaynum; Xvnc -nolisten tcp -rfbunixpath=/tmp/%(ENV_INSTANCE_ID)s/.vncsocket -auth /tmp/%(ENV_INSTANCE_ID)s/.Xauthority -rfbauth /tmp/%(ENV_INSTANCE_ID)s/.vncpasswd -displayfd 6'
+autostart=false
+
+
+[program:websockify]
+command=/usr/local/bin/websockify --portfd=/tmp/%(ENV_INSTANCE_ID)s/.novncport --web=/opt/noVNC-1.2.0/ --unix-target=/tmp/%(ENV_INSTANCE_ID)s/.vncsocket --file_only 0
+autostart=false
+
+[program:openbox]
+command=bash -c "openbox && kill -s SIGINT `cat /tmp/%(ENV_INSTANCE_ID)s/supervisord.pid`"
+autostart=false
+
+[program:xfce]
+command=bash -c "DISPLAY=:$(cat /tmp/%(ENV_INSTANCE_ID)s/.Xdisplaynum | tr -d '\n') xfce4-session --disable-tcp && kill -s SIGINT `cat /tmp/%(ENV_INSTANCE_ID)s/supervisord.pid`"
+autostart=false
+
+[program:host_x_command]
+command=bash -c "ssh -X %(ENV_USER)s@localhost %(ENV_HOST_X_COMMAND)s"
+autostart=false
