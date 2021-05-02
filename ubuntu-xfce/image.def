@@ -83,7 +83,7 @@ tar xvf v1.2.0.tar.gz
         echo  "Removing X socket..."
         rm "/tmp/.X11-unix/X$DISPLAY_NUM"
       fi
-      tail -f "/tmp/$INSTANCE_ID/supervisord.log"
+      tail "/tmp/$INSTANCE_ID/supervisord.log"
       echo 'Done'
       exit
     }
