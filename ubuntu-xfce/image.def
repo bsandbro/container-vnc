@@ -161,7 +161,10 @@ tar xvf v1.2.0.tar.gz
     printf "Connect to %s\n\n" $CONNECTION_STRING
     
     if [ -w "/cwd" ]; then 
-      if printf "export INSTANCE_ID=%s\nexport NOVNC_PORT=%s\nexport CONNECTION_STRING=%s\n" $INSTANCE_ID $NOVNC_PORT $CONNECTION_STRING > /cwd/connection.rc; then echo "Wrote connection.rc to the /cwd bind mount"; fi
+      if printf "export INSTANCE_ID=\"%s\"\nexport NOVNC_PORT=\"%s\"\nexport CONNECTION_STRING=\"%s\"\nexport DISPLAY=\":%s\"\nexport XAUTHORITY=\"%s\"\n" $INSTANCE_ID $NOVNC_PORT $CONNECTION_STRING $DISPLAY_NUM $XAUTHORITY > /cwd/connection.rc
+      then 
+        echo "Wrote connection.rc to the /cwd bind mount"; 
+      fi
 
     else 
       echo "Add bind mount to /cwd from a writable directory to export connection.rc with bash sourceable details about this container, ex. 'singularity run --bind \`pwd\`:/cwd ubuntu-xfce.sif'"; 
