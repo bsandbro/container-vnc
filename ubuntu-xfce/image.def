@@ -21,9 +21,12 @@ tar xvf v1.2.0.tar.gz
 
 %post
     export DEBIAN_FRONTEND=noninteractive
+    export TZ=America/New_York
     echo deb http://us.archive.ubuntu.com/ubuntu focal universe >> /etc/apt/sources.list
     #base
-    apt-get update && apt-get install --no-install-recommends -y ca-certificates python3 python3-setuptools tigervnc-standalone-server openbox supervisor ssh xauth tigervnc-common xxd xterm wget uuid-runtime
+    apt-get update && apt-get install --no-install-recommends -y ca-certificates python3 python3-setuptools tigervnc-standalone-server supervisor openssh-client xauth tigervnc-common wget uuid-runtime vim tzdata
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+    dpkg-reconfigure --frontend noninteractive tzdata
     #xfce dependencies from https://github.com/mviereck/dockerfile-x11docker-xfce/blob/master/Dockerfile
     apt-get install -y --no-install-recommends \
       dbus-x11 \
@@ -53,40 +56,113 @@ tar xvf v1.2.0.tar.gz
     echo "export BUILD_DATE=\"${NOW}\"" >> $SINGULARITY_ENVIRONMENT
     mv /services.conf /etc/supervisor/conf.d/services.conf
     mv /supervisor.conf /etc/supervisor/supervisord.conf
+    mkdir /cwd
 
 %runscript
-    #!/bin/bash
-    function ctrl_c() {
-        [[ -f /tmp/$INSTANCE_ID/supervisord.pid ]] || kill -s SIGINT $(cat /tmp/supervisord.pid)
-        kill $$
+#!/bin/bash
+    
+    export INSTANCE_ID=$(uuidgen)
+    export PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w8 | head -n 1)
+    
+    function cleanup() {
+      sleep 1
+      echo 'Cleaning up...'
+      [[ -f /tmp/$INSTANCE_ID/.supervisord.pid ]] && kill -s SIGTERM $(cat /tmp/$INSTANCE_ID/.supervisord.pid)
+      exit
     }
-    [[ ! -z "${PASSWORD}" ]] || export PASSWORD=password 
-    [[ ! -z "${INSTANCE_ID}" ]] || export INSTANCE_ID=$(uuidgen) 
-    trap ctrl_c INT
-    mkdir /tmp/$INSTANCE_ID
-    export XAUTHORITY=/tmp/$INSTANCE_ID/.Xauthority
+    
+    trap cleanup INT
+   
+    mkdir -p /tmp/$INSTANCE_ID
+    chmod 700 /tmp/$INSTANCE_ID
     export XDG_CONFIG_HOME="/tmp/$INSTANCE_ID"
     export XDG_CACHE_HOME="/tmp/$INSTANCE_ID"
+
     touch /tmp/$INSTANCE_ID/.Xauthority
+    export XAUTHORITY=/tmp/$INSTANCE_ID/.Xauthority
+
+    bash -c 'printf "%s\n%s\n\n" $PASSWORD $PASSWORD | vncpasswd /tmp/$INSTANCE_ID/.vncpasswd'  &> /dev/null || 
+    if [ $? -ne 0 ]; then
+      echo "Error setting password, must be at least 6 characters"
+      exit 1
+    fi
+
+    supervisord -n &> /dev/null & 
     
-    bash -c 'printf "%s\n%s\n\n" $PASSWORD $PASSWORD | vncpasswd /tmp/$INSTANCE_ID/.vncpasswd'  &> /dev/null
-    chmod 600 /tmp/$INSTANCE_ID/.vncpasswd
-    supervisord -n &> /dev/null &
-    while [ ! -e /tmp/$INSTANCE_ID/supervisor.sock ]; do sleep 1; done
+    for i in {1..20}
+      do
+      if [ -e /tmp/$INSTANCE_ID/supervisor.sock ]; then
+        break
+      else
+        sleep 1
+        continue
+      fi
+    echo "Timeout waiting for supervisord to start"
+    cleanup
+    done
+
     supervisorctl start Xvnc
-    export DISPLAY_NUM=$(cat /tmp/$INSTANCE_ID/.Xdisplaynum | tr -d '\n')
-    while [ ! -e /tmp/$INSTANCE_ID/.vncsocket ]; do sleep 1; done
-    chmod 600 /tmp/.X11-unix/X$DISPLAY_NUM && chmod 600 /tmp/$INSTANCE_ID/.vncsocket
+
+    for i in {1..20}
+      do
+      if [ -f /tmp/$INSTANCE_ID/.Xdisplaynum ] &&  [ -e /tmp/$INSTANCE_ID/.vncsocket ]; then
+        export DISPLAY_NUM=$(cat /tmp/$INSTANCE_ID/.Xdisplaynum | tr -d '\n')
+        
+        break
+      else
+        sleep 1
+        continue
+      fi
+    echo "Timeout waiting for Xvnc to start"
+    cleanup
+    done  
+
     supervisorctl start websockify
-    sleep 1
+
+    for i in {1..20}
+      do
+      if [ -f /tmp/$INSTANCE_ID/.novncport ]; then
+        export NOVNC_PORT=$(cat /tmp/$INSTANCE_ID/.novncport)
+        break
+      else
+        sleep 1
+        continue
+      fi
+    echo "Timeout waiting for websockify to start"
+    cleanup
+    done  
+
     supervisorctl start xfce
-    sleep 1
-    # [[ -z "${HOST_X_COMMAND}" ]] || supervisorctl start host_x_command
-    sleep 5
-    printf "Connect to http://localhost:%s/vnc.html?autoconnect=true&password=%s&resize=remote\n\n" `cat /tmp/$INSTANCE_ID/.novncport` $PASSWORD
-    printf "Waiting for supervisord to exit \nkill -s SIGINT %s to stop services gracefully, close the windowmanager in the vnc session, or CTRL+C in this terminal\n" $(cat /tmp/$INSTANCE_ID/supervisord.pid)
+
+    for i in {1..20}
+      do
+      if [ -d /tmp/$INSTANCE_ID/xfce4 ]; then
+        break
+      else
+        sleep 1
+        continue
+      fi
+    echo "Timeout waiting for Xvnc to start"
+    cleanup
+    done  
+    
+    export CONNECTION_STRING=$(printf "http://localhost:%s/vnc.html?autoconnect=true&password=%s&resize=remote" $NOVNC_PORT $PASSWORD)
+    printf "X server listening on :%s\n" $DISPLAY_NUM
+    printf "XAUTHORITY=%s DISPLAY=:%s\n\n" $XAUTHORITY $DISPLAY_NUM
+    printf "Logs and sockets stored in %s\n" "/tmp/$INSTANCE_ID/"
+    printf "Connect to %s\n\n" $CONNECTION_STRING
+    
+    if [ -w "/cwd" ]; then 
+      if printf "export INSTANCE_ID=%s\nexport NOVNC_PORT=%s\nexport CONNECTION_STRING=%s\n" $INSTANCE_ID $NOVNC_PORT $CONNECTION_STRING > /cwd/connection.rc; then echo "Wrote connection.rc to the /cwd bind mount"; fi
+
+    else 
+      echo "Add bind mount to /cwd from a writable directory to export connection.rc with bash sourceable details about this container, ex. 'singularity run --bind \`pwd\`:/cwd ubuntu-xfce.sif'"; 
+    fi
+
+    printf "Waiting for supervisord to exit \n\nTo manually stop either:\n - Run 'kill -s SIGINT %s'\n - Log out of the windowmanager in the novnc session \n - Press CTRL+C in this terminal\n" $(cat /tmp/$INSTANCE_ID/supervisord.pid)
+
     wait $(cat /tmp/$INSTANCE_ID/supervisord.pid)
-    rm /tmp/.X11-unix/X$DISPLAY_NUM 
+    cleanup
 
 %test
     grep -q NAME=\"Ubuntu\" /etc/os-release
