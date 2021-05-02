@@ -115,7 +115,7 @@ tar xvf v1.2.0.tar.gz
       do
       if [ -f /tmp/$INSTANCE_ID/.Xdisplaynum ] &&  [ -e /tmp/$INSTANCE_ID/.vncsocket ]; then
         export DISPLAY_NUM=$(cat /tmp/$INSTANCE_ID/.Xdisplaynum | tr -d '\n')
-        
+        xauth add :$DISPLAY_NUM . $(xxd -l 16 -p /dev/urandom)
         break
       else
         sleep 1
