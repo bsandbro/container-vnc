@@ -1,3 +1,5 @@
-export INSTANCE_ID=45d87792-0c78-4878-9d59-6a04ab9d48e0
-export NOVNC_PORT=34723
-export CONNECTION_STRING=http://localhost:34723/vnc.html?autoconnect=true&password=uV9VaKBm&resize=remote
+export INSTANCE_ID="0f16d840-9c14-4fad-a460-5733fbd1635e"
+export NOVNC_PORT="45695"
+export CONNECTION_STRING="http://localhost:45695/vnc.html?autoconnect=true&password=XLU2yJXu&resize=remote"
+export DISPLAY=":0"
+export XAUTHORITY="/tmp/0f16d840-9c14-4fad-a460-5733fbd1635e/.Xauthority"
