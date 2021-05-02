@@ -15,6 +15,8 @@ tar xvf v1.2.0.tar.gz
 %files
     services.conf 
     supervisor.conf 
+    xfcestart.sh
+    Xvncstart.sh
 
 %environment
     export LC_ALL=C
@@ -56,6 +58,11 @@ tar xvf v1.2.0.tar.gz
     echo "export BUILD_DATE=\"${NOW}\"" >> $SINGULARITY_ENVIRONMENT
     mv /services.conf /etc/supervisor/conf.d/services.conf
     mv /supervisor.conf /etc/supervisor/supervisord.conf
+    mv /xfcestart.sh /usr/local/bin/
+    chmod +x /usr/local/bin/xfcestart.sh
+    mv /Xvncstart.sh /usr/local/bin/
+    chmod +x /usr/local/bin/xfcestart.sh
+    chmod +x /usr/local/bin/Xvncstart.sh
     mkdir /cwd
 
 %runscript
@@ -81,7 +88,7 @@ tar xvf v1.2.0.tar.gz
 
     touch /tmp/$INSTANCE_ID/.Xauthority
     export XAUTHORITY=/tmp/$INSTANCE_ID/.Xauthority
-
+    echo $$ > /tmp/$INSTANCE_ID/runscript.pid
     bash -c 'printf "%s\n%s\n\n" $PASSWORD $PASSWORD | vncpasswd /tmp/$INSTANCE_ID/.vncpasswd'  &> /dev/null || 
     if [ $? -ne 0 ]; then
       echo "Error setting password, must be at least 6 characters"
