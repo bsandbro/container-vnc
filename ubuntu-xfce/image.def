@@ -74,8 +74,17 @@ tar xvf v1.2.0.tar.gz
     
     function cleanup() {
       sleep 1
-      echo 'Cleaning up...'
-      [[ -f /tmp/$INSTANCE_ID/.supervisord.pid ]] && kill -s SIGTERM $(cat /tmp/$INSTANCE_ID/.supervisord.pid)
+      printf '\nCleaning up...\n'
+      if [ -f "/tmp/$INSTANCE_ID/supervisord.pid" ]; then
+        echo  "Killing supervisord..."
+        kill -s SIGTERM $(cat "/tmp/$INSTANCE_ID/supervisord.pid")
+      fi
+      if [ -z "$DISPLAY_NUM" ] && [ -e /tmp/.X11-unix/X$DISPLAY_NUM ]; then
+        echo  "Removing X socket..."
+        rm "/tmp/.X11-unix/X$DISPLAY_NUM"
+      fi
+      tail -f "/tmp/$INSTANCE_ID/supervisord.log"
+      echo 'Done'
       exit
     }
     
