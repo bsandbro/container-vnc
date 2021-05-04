@@ -15,7 +15,9 @@ sudo singularity build ubuntu-xfce.sif image.def
 ## Usage
 
 ```bash
-singularity run --bind `pwd`:/cwd ubuntu-xfce.sif 
+rm connection.rc
+singularity run --bind `pwd`:/cwd ubuntu-xfce.sif &
+while [ ! -f ./connection.rc ]; do sleep 1; done
+source connection.rc
+xterm
 ```
-
-
