@@ -198,5 +198,7 @@ tar xvf v1.2.0.tar.gz
     Version v0.0.1
 
 %help
-    This container wraps an Xvnc server with an openbox window manager and exposes 
-    a noVNC server on a random ephemeral port
+    This container wraps an Xvnc server with an xfce window manager and exposes 
+    a noVNC server on a random ephemeral port, connection details are printed to the terminal
+    or exported to connection.rc when a writable directory is bind mounted to /cwd in the container.
+    Source connection.rc and the terminal default DISPLAY will be set to the container XVNC instance
