@@ -97,6 +97,7 @@ tar xvf v1.2.0.tar.gz
 
     touch /tmp/$INSTANCE_ID/.Xauthority
     export XAUTHORITY=/tmp/$INSTANCE_ID/.Xauthority
+    export ICEAUTHORITY=/tmp/$INSTANCE_ID/.ICEauthority
     echo $$ > /tmp/$INSTANCE_ID/runscript.pid
     bash -c 'printf "%s\n%s\n\n" $PASSWORD $PASSWORD | vncpasswd /tmp/$INSTANCE_ID/.vncpasswd'  &> /dev/null || 
     if [ $? -ne 0 ]; then
