@@ -83,6 +83,9 @@ tar xvf v1.2.0.tar.gz
         echo  "Removing X socket..."
         rm "/tmp/.X11-unix/X$DISPLAY_NUM"
       fi
+      if [ -d "/tmp/$INSTANCE_ID/runtime" ]; then
+        rm -rf "/tmp/$INSTANCE_ID/runtime"
+      fi
       tail "/tmp/$INSTANCE_ID/supervisord.log"
       echo 'Done'
       exit
@@ -92,8 +95,14 @@ tar xvf v1.2.0.tar.gz
    
     mkdir -p /tmp/$INSTANCE_ID
     chmod 700 /tmp/$INSTANCE_ID
+    mkdir -p /tmp/$INSTANCE_ID/runtime
+    chmod 700 /tmp/$INSTANCE_ID/runtime
+    
     export XDG_CONFIG_HOME="/tmp/$INSTANCE_ID"
     export XDG_CACHE_HOME="/tmp/$INSTANCE_ID"
+    export XDG_RUNTIME_DIR="/tmp/$INSTANCE_ID/runtime"
+    export DBUS_SESSION_BUS_ADDRESS="/unix:path=/tmp/$INSTANCE_ID/runtime/dbus"
+    export XDG_DATA_HOME="/tmp/$INSTANCE_ID"
 
     touch /tmp/$INSTANCE_ID/.Xauthority
     export XAUTHORITY=/tmp/$INSTANCE_ID/.Xauthority
