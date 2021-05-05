@@ -52,8 +52,7 @@ tar xvf v1.2.0.tar.gz
       libxv1
     cd /opt/websockify
     python3 setup.py install
-    BUULD_DATE=`date`
-    echo "export BUILD_DATE=\"${NOW}\"" >> $SINGULARITY_ENVIRONMENT
+    echo "export BUILD_DATE=\"$(date -R)\"" >> $SINGULARITY_ENVIRONMENT
     mv /services.conf /etc/supervisor/conf.d/services.conf
     mv /supervisor.conf /etc/supervisor/supervisord.conf
     mv /xfcestart.sh /usr/local/bin/
