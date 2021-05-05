@@ -94,6 +94,7 @@ tar xvf v1.2.0.tar.gz
           tail "/tmp/$INSTANCE_ID/supervisord.log"
         else
           tail "/tmp/$INSTANCE_ID/supervisord.log"
+          echo Removing instance directory
           rm -rf "/tmp/$INSTANCE_ID"
         fi
       fi
