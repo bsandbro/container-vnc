@@ -186,12 +186,12 @@ tar xvf v1.2.0.tar.gz
     
     export CONNECTION_STRING=$(printf "http://$(hostname):%s/vnc.html?autoconnect=true&password=%s&resize=remote" $NOVNC_PORT $PASSWORD)
     printf "X server listening on :%s\n" $DISPLAY_NUM
-    printf "XAUTHORITY=%s DISPLAY=:%s\n\n" $XAUTHORITY $DISPLAY_NUM
+    printf "XAUTHORITY=%s ICEAUTHORITY=%s DISPLAY=:%s\n\n" $XAUTHORITY $ICEAUTHORITY $DISPLAY_NUM
     printf "Logs and sockets stored in %s\n" "/tmp/$INSTANCE_ID/"
     printf "Connect to %s\n\n" $CONNECTION_STRING
     
     if [ -w "/cwd" ]; then 
-      if printf "export INSTANCE_ID=\"%s\"\nexport NOVNC_PORT=\"%s\"\nexport CONNECTION_STRING=\"%s\"\nexport DISPLAY=\":%s\"\nexport XAUTHORITY=\"%s\"\n" $INSTANCE_ID $NOVNC_PORT $CONNECTION_STRING $DISPLAY_NUM $XAUTHORITY > /cwd/connection.rc
+      if printf "export INSTANCE_ID=\"%s\"\nexport NOVNC_PORT=\"%s\"\nexport CONNECTION_STRING=\"%s\"\nexport DISPLAY=\":%s\"\nexport XAUTHORITY=\"%s\"\nexport ICEAUTHORITY=\"%s\"\n" $INSTANCE_ID $NOVNC_PORT $CONNECTION_STRING $DISPLAY_NUM $XAUTHORITY $ICEAUTHORITY > /cwd/connection.rc
       then 
         echo "Wrote connection.rc to the /cwd bind mount"; 
       fi
