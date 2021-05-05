@@ -186,16 +186,19 @@ tar xvf v1.2.0.tar.gz
     
     export CONNECTION_STRING=$(printf "http://$(hostname):%s/vnc.html?autoconnect=true&password=%s&resize=remote" $NOVNC_PORT $PASSWORD)
     printf "X server listening on :%s\n" $DISPLAY_NUM
-    printf "XAUTHORITY=%s ICEAUTHORITY=%s DISPLAY=:%s\n\n" $XAUTHORITY $ICEAUTHORITY $DISPLAY_NUM
+    printf "XAUTHORITY=%s ICEAUTHORITY=%s SESSION_MANAGER=%s DISPLAY=:%s\n\n" $XAUTHORITY $ICEAUTHORITY $SESSION_MANAGER $DISPLAY_NUM
     printf "Logs and sockets stored in %s\n" "/tmp/$INSTANCE_ID/"
     printf "Connect to %s\n\n" $CONNECTION_STRING
     
     if [ -w "/cwd" ]; then 
-      if printf "export INSTANCE_ID=\"%s\"\nexport NOVNC_PORT=\"%s\"\nexport CONNECTION_STRING=\"%s\"\nexport DISPLAY=\":%s\"\nexport XAUTHORITY=\"%s\"\nexport ICEAUTHORITY=\"%s\"\n" $INSTANCE_ID $NOVNC_PORT $CONNECTION_STRING $DISPLAY_NUM $XAUTHORITY $ICEAUTHORITY > /cwd/connection.rc
-      then 
-        echo "Wrote connection.rc to the /cwd bind mount"; 
-      fi
-
+      printf "export INSTANCE_ID=\"%s\"\n" $INSTANCE_ID > /cwd/connection.rc
+      printf "export NOVNC_PORT=\"%s\"\n" $NOVNC_PORT >> /cwd/connection.rc
+      printf "export CONNECTION_STRING=\"%s\"\n" $CONNECTION_STRING >> /cwd/connection.rc
+      printf "export DISPLAY=\":%s\"\n" $DISPLAY_NUM >> /cwd/connection.rc
+      printf "export XAUTHORITY=\"%s\"\n" $XAUTHORITY >> /cwd/connection.rc
+      printf "export ICEAUTHORITY=\"%s\"\n" $ICEAUTHORITY >> /cwd/connection.rc
+      printf "export SESSION_MANAGER=\"%s\"\n" $SESSION_MANAGER >> /cwd/connection.rc
+      echo "Wrote connection.rc to the /cwd bind mount"
     else 
       echo "Add bind mount to /cwd from a writable directory to export connection.rc with bash sourceable details about this container, ex. 'singularity run --bind \`pwd\`:/cwd ubuntu-xfce.sif'"; 
     fi
