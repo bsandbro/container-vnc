@@ -82,7 +82,6 @@ tar xvf v1.2.0.tar.gz
         rm -f "/tmp/.X11-unix/X$DISPLAY_NUM"
       fi
       if [ ! -z "${SESSION_MANAGER}" ]; then
-        env
         export ICESOCKET="$(python3 -c $'import re,os,sys\nm=re.search(r"(?<!\@)\/tmp\/.ICE-unix\/\d*", os.getenv("SESSION_MANAGER"))\nif m is not None:\n\tprint(m.group(0))\n\tsys.exit(0)\nelse:\n\tsys.exit(1)')"
         if [ ! -z "${ICESOCKET}" ] && [ -e "$ICESOCKET" ]; then
           echo  "Removing ICE socket...$ICESOCKET"
