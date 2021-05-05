@@ -26,10 +26,9 @@ tar xvf v1.2.0.tar.gz
     export TZ=America/New_York
     echo deb http://us.archive.ubuntu.com/ubuntu focal universe >> /etc/apt/sources.list
     #base
-    apt-get update && apt-get install --no-install-recommends -y ca-certificates python3 python3-setuptools tigervnc-standalone-server supervisor openssh-client xauth tigervnc-common wget uuid-runtime vim tzdata
+    apt-get update && apt-get install --no-install-recommends -y ca-certificates python3 python3-setuptools tigervnc-standalone-server supervisor openssh-client xauth tigervnc-common wget uuid-runtime vim tzdata firefox
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
     dpkg-reconfigure --frontend noninteractive tzdata
-    #xfce dependencies from https://github.com/mviereck/dockerfile-x11docker-xfce/blob/master/Dockerfile
     apt-get install -y --no-install-recommends \
       dbus-x11 \
       psmisc \
@@ -49,9 +48,7 @@ tar xvf v1.2.0.tar.gz
       xfce4-whiskermenu-plugin \
       xubuntu-artwork \
       xubuntu-icon-theme \
-      libxv1 
-    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-    apt install -y ./google-chrome-stable_current_amd64.deb
+      libxv1
     cd /opt/websockify
     python3 setup.py install
     BUULD_DATE=`date`
@@ -71,7 +68,7 @@ tar xvf v1.2.0.tar.gz
     export INSTANCE_ID=$(uuidgen)
     export PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w8 | head -n 1)
     export SUPERVISORD_PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w12 | head -n 1)
-    
+
     function cleanup() {
       sleep 1
       printf '\nCleaning up...\n'
@@ -90,9 +87,9 @@ tar xvf v1.2.0.tar.gz
       echo 'Done'
       exit
     }
-    
+
     trap cleanup INT
-   
+
     mkdir -p /tmp/$INSTANCE_ID
     chmod 700 /tmp/$INSTANCE_ID
     mkdir -p /tmp/$INSTANCE_ID/runtime
@@ -108,7 +105,7 @@ tar xvf v1.2.0.tar.gz
     export XAUTHORITY=/tmp/$INSTANCE_ID/.Xauthority
     export ICEAUTHORITY=/tmp/$INSTANCE_ID/.ICEauthority
     echo $$ > /tmp/$INSTANCE_ID/runscript.pid
-    bash -c 'printf "%s\n%s\n\n" $PASSWORD $PASSWORD | vncpasswd /tmp/$INSTANCE_ID/.vncpasswd'  &> /dev/null || 
+    bash -c 'printf "%s\n%s\n\n" $PASSWORD $PASSWORD | vncpasswd /tmp/$INSTANCE_ID/.vncpasswd'  &> /dev/null ||
     if [ $? -ne 0 ]; then
       echo "Error setting password, must be at least 6 characters"
       exit 1
