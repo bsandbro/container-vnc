@@ -169,7 +169,7 @@ tar xvf v1.2.0.tar.gz
     cleanup
     done  
     
-    export CONNECTION_STRING=$(printf "http://localhost:%s/vnc.html?autoconnect=true&password=%s&resize=remote" $NOVNC_PORT $PASSWORD)
+    export CONNECTION_STRING=$(printf "http://$(hostname):%s/vnc.html?autoconnect=true&password=%s&resize=remote" $NOVNC_PORT $PASSWORD)
     printf "X server listening on :%s\n" $DISPLAY_NUM
     printf "XAUTHORITY=%s DISPLAY=:%s\n\n" $XAUTHORITY $DISPLAY_NUM
     printf "Logs and sockets stored in %s\n" "/tmp/$INSTANCE_ID/"
