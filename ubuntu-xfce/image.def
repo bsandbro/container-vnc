@@ -49,7 +49,8 @@ tar xvf v1.2.0.tar.gz
       xfce4-whiskermenu-plugin \
       xubuntu-artwork \
       xubuntu-icon-theme \
-      libxv1
+      libxv1 \
+      qpdfview
     cd /opt/websockify
     python3 setup.py install
     echo "export BUILD_DATE=\"$(date -R)\"" >> $SINGULARITY_ENVIRONMENT
@@ -185,7 +186,7 @@ tar xvf v1.2.0.tar.gz
     cleanup
     done  
     
-    export CONNECTION_STRING=$(printf "http://$(hostname):%s/vnc.html?autoconnect=true&password=%s&resize=remote" $NOVNC_PORT $PASSWORD)
+    export CONNECTION_STRING="https://ood.arc.vt.edu/rnode/$(hostname)/$NOVNC_PORT/vnc.html?autoconnect=true&password=$PASSWORD&port=$NOVNC_PORT&host=ood.arc.vt.edu%2Frnode%2F$(hostname)%2F$NOVNC_PORT"
     printf "X server listening on :%s\n" $DISPLAY_NUM
     printf "XAUTHORITY=%s ICEAUTHORITY=%s SESSION_MANAGER=%s DISPLAY=:%s\n\n" $XAUTHORITY $ICEAUTHORITY $SESSION_MANAGER $DISPLAY_NUM
     printf "Logs and sockets stored in %s\n" "/tmp/$INSTANCE_ID/"
@@ -199,6 +200,9 @@ tar xvf v1.2.0.tar.gz
       printf "export XAUTHORITY=\"%s\"\n" $XAUTHORITY >> /cwd/connection.rc
       printf "export ICEAUTHORITY=\"%s\"\n" $ICEAUTHORITY >> /cwd/connection.rc
       printf "export SESSION_MANAGER=\"%s\"\n" $SESSION_MANAGER >> /cwd/connection.rc
+      printf "export password=\"%s\"\n" $PASSWORD >> /cwd/connection.rc
+      printf "export hostname=\"%s\"\n" $(hostname) >> /cwd/connection.rc
+      printf "export port=\"%s\"\n" $NOVNC_PORT >> /cwd/connection.rc
       echo "Wrote connection.rc to the /cwd bind mount"
     else 
       echo "Add bind mount to /cwd from a writable directory to export connection.rc with bash sourceable details about this container, ex. 'singularity run --bind \`pwd\`:/cwd ubuntu-xfce.sif'"; 
