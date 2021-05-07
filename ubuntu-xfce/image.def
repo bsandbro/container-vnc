@@ -50,6 +50,7 @@ tar xvf v1.2.0.tar.gz
       xubuntu-artwork \
       xubuntu-icon-theme \
       libxv1 \
+      libqt5gui5 \
       qpdfview
     cd /opt/websockify
     python3 setup.py install
