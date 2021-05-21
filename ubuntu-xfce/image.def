@@ -13,8 +13,8 @@ wget https://github.com/novnc/noVNC/archive/refs/tags/v1.2.0.tar.gz
 tar xvf v1.2.0.tar.gz
 
 %files
-    services.conf 
-    supervisor.conf 
+    services.conf
+    supervisor.conf
     xfcestart.sh
     Xvncstart.sh
     session-manager-export.desktop
@@ -67,7 +67,7 @@ tar xvf v1.2.0.tar.gz
 
 %runscript
 #!/bin/bash
-    
+
     export INSTANCE_ID=$(uuidgen)
     export PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w8 | head -n 1)
     export SUPERVISORD_PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w12 | head -n 1)
@@ -126,8 +126,8 @@ tar xvf v1.2.0.tar.gz
       exit 1
     fi
 
-    supervisord -n &> /dev/null & 
-    
+    supervisord -n &> /dev/null &
+
     for i in {1..20}
       do
       if [ -e /tmp/$INSTANCE_ID/supervisor.sock ]; then
@@ -155,7 +155,7 @@ tar xvf v1.2.0.tar.gz
       fi
     echo "Timeout waiting for Xvnc to start"
     cleanup
-    done  
+    done
 
     supervisorctl start websockify
 
@@ -170,7 +170,7 @@ tar xvf v1.2.0.tar.gz
       fi
     echo "Timeout waiting for websockify to start"
     cleanup
-    done  
+    done
 
     supervisorctl start xfce
 
@@ -185,15 +185,15 @@ tar xvf v1.2.0.tar.gz
       fi
     echo "Timeout waiting for Xvnc to start"
     cleanup
-    done  
-    
-    export CONNECTION_STRING="https://ood.arc.vt.edu/rnode/$(hostname)/$NOVNC_PORT/vnc.html?autoconnect=true&password=$PASSWORD&port=$NOVNC_PORT&host=ood.arc.vt.edu%2Frnode%2F$(hostname)%2F$NOVNC_PORT"
+    done
+
+    export CONNECTION_STRING="https://ood.arc.vt.edu/rnode/$(hostname)/$NOVNC_PORT/vnc.html?autoconnect=true&port=$NOVNC_PORT&host=ood.arc.vt.edu/rnode/$(hostname)/$NOVNC_PORT&password=$PASSWORD"
     printf "X server listening on :%s\n" $DISPLAY_NUM
     printf "XAUTHORITY=%s ICEAUTHORITY=%s SESSION_MANAGER=%s DISPLAY=:%s\n\n" $XAUTHORITY $ICEAUTHORITY $SESSION_MANAGER $DISPLAY_NUM
     printf "Logs and sockets stored in %s\n" "/tmp/$INSTANCE_ID/"
     printf "Connect to %s\n\n" $CONNECTION_STRING
-    
-    if [ -w "/cwd" ]; then 
+
+    if [ -w "/cwd" ]; then
       printf "export INSTANCE_ID=\"%s\"\n" $INSTANCE_ID > /cwd/connection.rc
       printf "export NOVNC_PORT=\"%s\"\n" $NOVNC_PORT >> /cwd/connection.rc
       printf "export CONNECTION_STRING=\"%s\"\n" $CONNECTION_STRING >> /cwd/connection.rc
@@ -205,8 +205,8 @@ tar xvf v1.2.0.tar.gz
       printf "export hostname=\"%s\"\n" $(hostname) >> /cwd/connection.rc
       printf "export port=\"%s\"\n" $NOVNC_PORT >> /cwd/connection.rc
       echo "Wrote connection.rc to the /cwd bind mount"
-    else 
-      echo "Add bind mount to /cwd from a writable directory to export connection.rc with bash sourceable details about this container, ex. 'singularity run --bind \`pwd\`:/cwd ubuntu-xfce.sif'"; 
+    else
+      echo "Add bind mount to /cwd from a writable directory to export connection.rc with bash sourceable details about this container, ex. 'singularity run --cleanenv --env PYTHONPATH=/usr/local/lib/python3.8/dist-packages/websockify-0.9.0-py3.8.egg --bind \`pwd\`:/cwd ubuntu-xfce.sif'";
     fi
 
     printf "Waiting for supervisord to exit \n\nTo manually stop either:\n - Run 'kill -s SIGINT %s'\n - Log out of the windowmanager in the novnc session \n - Press CTRL+C in this terminal\n" $(cat /tmp/$INSTANCE_ID/supervisord.pid)
@@ -227,7 +227,7 @@ tar xvf v1.2.0.tar.gz
     Version v0.0.1
 
 %help
-    This container wraps an Xvnc server with an xfce window manager and exposes 
+    This container wraps an Xvnc server with an xfce window manager and exposes
     a noVNC server on a random ephemeral port, connection details are printed to the terminal
     or exported to connection.rc when a writable directory is bind mounted to /cwd in the container.
     Source connection.rc and the terminal default DISPLAY will be set to the container XVNC instance
