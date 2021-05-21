@@ -71,6 +71,7 @@ tar xvf v1.2.0.tar.gz
     export INSTANCE_ID=$(uuidgen)
     export PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w8 | head -n 1)
     export SUPERVISORD_PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w12 | head -n 1)
+    export PYTHONPATH=/usr/local/lib/python3.8/dist-packages/websockify-0.9.0-py3.8.egg
 
     function cleanup() {
       sleep 1
