@@ -64,11 +64,11 @@ tar xvf v1.2.0.tar.gz
     chmod +x /usr/local/bin/Xvncstart.sh
     mkdir /cwd
     mv /session-manager-export.desktop /etc/xdg/autostart/
+    mkdir /TMPDIR
 
 %runscript
 #!/bin/bash
 
-    export INSTANCE_ID=$(uuidgen)
     export PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w8 | head -n 1)
     export SUPERVISORD_PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w12 | head -n 1)
     export PYTHONPATH=/usr/local/lib/python3.8/dist-packages/websockify-0.9.0-py3.8.egg
@@ -76,9 +76,9 @@ tar xvf v1.2.0.tar.gz
     function cleanup() {
       sleep 1
       printf '\nCleaning up...\n'
-      if [ -f "/tmp/$INSTANCE_ID/supervisord.pid" ]; then
+      if [ -f "/TMPDIR/supervisord.pid" ]; then
         echo  "Killing supervisord..."
-        kill -s SIGTERM $(cat "/tmp/$INSTANCE_ID/supervisord.pid")
+        kill -s SIGTERM $(cat "/TMPDIR/supervisord.pid")
       fi
       if [ ! -z "${DISPLAY_NUM}" ] && [ -e /tmp/.X11-unix/X$DISPLAY_NUM ]; then
         echo  "Removing X socket..."
@@ -91,37 +91,25 @@ tar xvf v1.2.0.tar.gz
           rm -f "$ICESOCKET"
         fi
       fi
-      if [ ! -z "${INSTANCE_ID}" ] && [ -d "/tmp/$INSTANCE_ID" ]; then
-        if [ "$DEBUG_CONTAINER" = true ]; then
-          echo DEBUG_CONTAINER set to true, not removing instance directory
-          tail "/tmp/$INSTANCE_ID/supervisord.log"
-        else
-          tail "/tmp/$INSTANCE_ID/supervisord.log"
-          echo Removing instance directory
-          rm -rf "/tmp/$INSTANCE_ID"
-        fi
-      fi
       echo 'Done'
       exit
     }
 
     trap cleanup INT
 
-    mkdir -p /tmp/$INSTANCE_ID
-    chmod 700 /tmp/$INSTANCE_ID
-    mkdir -p /tmp/$INSTANCE_ID/runtime
-    chmod 700 /tmp/$INSTANCE_ID/runtime
+    mkdir -p /TMPDIR/runtime
+    chmod 700 /TMPDIR/runtime
 
-    export XDG_CONFIG_HOME="/tmp/$INSTANCE_ID"
-    export XDG_CACHE_HOME="/tmp/$INSTANCE_ID"
-    export XDG_RUNTIME_DIR="/tmp/$INSTANCE_ID/runtime"
-    export XDG_DATA_HOME="/tmp/$INSTANCE_ID"
+    export XDG_CONFIG_HOME="/TMPDIR"
+    export XDG_CACHE_HOME="/TMPDIR"
+    export XDG_RUNTIME_DIR="/TMPDIR/runtime"
+    export XDG_DATA_HOME="/TMPDIR"
 
-    touch /tmp/$INSTANCE_ID/.Xauthority
-    export XAUTHORITY=/tmp/$INSTANCE_ID/.Xauthority
-    export ICEAUTHORITY=/tmp/$INSTANCE_ID/.ICEauthority
-    echo $$ > /tmp/$INSTANCE_ID/runscript.pid
-    bash -c 'printf "%s\n%s\n\n" $PASSWORD $PASSWORD | vncpasswd /tmp/$INSTANCE_ID/.vncpasswd'  &> /dev/null ||
+    touch /TMPDIR/.Xauthority
+    export XAUTHORITY=/TMPDIR/.Xauthority
+    export ICEAUTHORITY=/TMPDIR/.ICEauthority
+    echo $$ > /TMPDIR/runscript.pid
+    bash -c 'printf "%s\n%s\n\n" $PASSWORD $PASSWORD | vncpasswd /TMPDIR/.vncpasswd'  &> /dev/null ||
     if [ $? -ne 0 ]; then
       echo "Error setting password, must be at least 6 characters"
       exit 1
@@ -131,7 +119,7 @@ tar xvf v1.2.0.tar.gz
 
     for i in {1..20}
       do
-      if [ -e /tmp/$INSTANCE_ID/supervisor.sock ]; then
+      if [ -e /TMPDIR/supervisor.sock ]; then
         break
       else
         sleep 1
@@ -145,9 +133,9 @@ tar xvf v1.2.0.tar.gz
 
     for i in {1..20}
       do
-      if [ -f /tmp/$INSTANCE_ID/.Xdisplaynum ] &&  [ -e /tmp/$INSTANCE_ID/.vncsocket ]; then
+      if [ -f /TMPDIR/.Xdisplaynum ] &&  [ -e /TMPDIR/.vncsocket ]; then
         sleep 2
-        export DISPLAY_NUM=$(cat /tmp/$INSTANCE_ID/.Xdisplaynum | tr -d '\n')
+        export DISPLAY_NUM=$(cat /TMPDIR/.Xdisplaynum | tr -d '\n')
         xauth add :$DISPLAY_NUM . $(xxd -l 16 -p /dev/urandom)
         break
       else
@@ -162,8 +150,8 @@ tar xvf v1.2.0.tar.gz
 
     for i in {1..20}
       do
-      if [ -f /tmp/$INSTANCE_ID/.novncport ]; then
-        export NOVNC_PORT=$(cat /tmp/$INSTANCE_ID/.novncport)
+      if [ -f /TMPDIR/.novncport ]; then
+        export NOVNC_PORT=$(cat /TMPDIR/.novncport)
         break
       else
         sleep 1
@@ -177,8 +165,8 @@ tar xvf v1.2.0.tar.gz
 
     for i in {1..20}
       do
-      if [ -d /tmp/$INSTANCE_ID/xfce4 ] && [ -f /tmp/$INSTANCE_ID/session.rc ]; then
-        source /tmp/$INSTANCE_ID/session.rc
+      if [ -d /TMPDIR/xfce4 ] && [ -f /TMPDIR/session.rc ]; then
+        source /TMPDIR/session.rc
         break
       else
         sleep 1
@@ -191,16 +179,15 @@ tar xvf v1.2.0.tar.gz
     export CONNECTION_STRING="https://ood.arc.vt.edu/rnode/$(hostname)/$NOVNC_PORT/vnc.html?autoconnect=true&port=$NOVNC_PORT&host=ood.arc.vt.edu/rnode/$(hostname)/$NOVNC_PORT&password=$PASSWORD"
     printf "X server listening on :%s\n" $DISPLAY_NUM
     printf "XAUTHORITY=%s ICEAUTHORITY=%s SESSION_MANAGER=%s DISPLAY=:%s\n\n" $XAUTHORITY $ICEAUTHORITY $SESSION_MANAGER $DISPLAY_NUM
-    printf "Logs and sockets stored in %s\n" "/tmp/$INSTANCE_ID/"
+    printf "Logs and sockets stored in %s\n" '/$TMPDIR/'
     printf "Connect to %s\n\n" $CONNECTION_STRING
 
     if [ -w "/cwd" ]; then
-      printf "export INSTANCE_ID=\"%s\"\n" $INSTANCE_ID > /cwd/connection.rc
-      printf "export NOVNC_PORT=\"%s\"\n" $NOVNC_PORT >> /cwd/connection.rc
+      printf "export NOVNC_PORT=\"%s\"\n" $NOVNC_PORT > /cwd/connection.rc
       printf "export CONNECTION_STRING=\"%s\"\n" $CONNECTION_STRING >> /cwd/connection.rc
       printf "export DISPLAY=\":%s\"\n" $DISPLAY_NUM >> /cwd/connection.rc
-      printf "export XAUTHORITY=\"%s\"\n" $XAUTHORITY >> /cwd/connection.rc
-      printf "export ICEAUTHORITY=\"%s\"\n" $ICEAUTHORITY >> /cwd/connection.rc
+      printf "export XAUTHORITY=\"%s\"\n" '$TMPDIR/.Xauthority' >> /cwd/connection.rc
+      printf "export ICEAUTHORITY=\"%s\"\n" '$TMPDIR/.ICEauthority' >> /cwd/connection.rc
       printf "export SESSION_MANAGER=\"%s\"\n" $SESSION_MANAGER >> /cwd/connection.rc
       printf "export password=\"%s\"\n" $PASSWORD >> /cwd/connection.rc
       printf "export hostname=\"%s\"\n" $(hostname) >> /cwd/connection.rc
@@ -210,9 +197,9 @@ tar xvf v1.2.0.tar.gz
       echo "Add bind mount to /cwd from a writable directory to export connection.rc with bash sourceable details about this container, ex. 'singularity run --cleanenv --env PYTHONPATH=/usr/local/lib/python3.8/dist-packages/websockify-0.9.0-py3.8.egg --bind \`pwd\`:/cwd ubuntu-xfce.sif'";
     fi
 
-    printf "Waiting for supervisord to exit \n\nTo manually stop either:\n - Run 'kill -s SIGINT %s'\n - Log out of the windowmanager in the novnc session \n - Press CTRL+C in this terminal\n" $(cat /tmp/$INSTANCE_ID/supervisord.pid)
+    printf "Waiting for supervisord to exit \n\nTo manually stop either:\n - Run 'kill -s SIGINT %s'\n - Log out of the windowmanager in the novnc session \n - Press CTRL+C in this terminal\n" $(cat /TMPDIR/supervisord.pid)
 
-    wait $(cat /tmp/$INSTANCE_ID/supervisord.pid)
+    wait $(cat /TMPDIR/supervisord.pid)
     cleanup
 
 %test

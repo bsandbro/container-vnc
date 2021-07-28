@@ -1,5 +1,5 @@
 #!/bin/bash
 
-exec 6<> /tmp/$1/.Xdisplaynum
+exec 6<> /TMPDIR/.Xdisplaynum
 
-Xvnc -nolisten tcp -rfbunixpath=/tmp/$1/.vncsocket -auth /tmp/$1/.Xauthority -rfbauth /tmp/$1/.vncpasswd -displayfd 6
+Xvnc -nolisten tcp -rfbunixpath=/TMPDIR/.vncsocket -auth /TMPDIR/.Xauthority -rfbauth /TMPDIR/.vncpasswd -displayfd 6
