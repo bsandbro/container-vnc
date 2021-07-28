@@ -16,7 +16,7 @@ sudo singularity build ubuntu-xfce.sif image.def
 
 ```bash
 rm connection.rc
-singularity run --env PYTHONPATH=/usr/local/lib/python3.8/dist-packages/websockify-0.9.0-py3.8.egg --bind `pwd`:/cwd ubuntu-xfce.sif &
+singularity run --bind `pwd`:/cwd ubuntu-xfce.sif &
 while [ ! -f ./connection.rc ]; do sleep 1; done
 source connection.rc
 xterm
