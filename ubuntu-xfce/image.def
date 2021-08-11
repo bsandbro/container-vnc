@@ -18,6 +18,7 @@ tar xvf v1.2.0.tar.gz
     xfcestart.sh
     Xvncstart.sh
     session-manager-export.desktop
+    get_ice_session.py
 
 %environment
     export LC_ALL=C
@@ -27,7 +28,7 @@ tar xvf v1.2.0.tar.gz
     export TZ=America/New_York
     echo deb http://us.archive.ubuntu.com/ubuntu focal universe >> /etc/apt/sources.list
     #base
-    apt-get update && apt-get install --no-install-recommends -y ca-certificates python3 python3-setuptools tigervnc-standalone-server supervisor openssh-client xauth tigervnc-common wget uuid-runtime vim tzdata firefox
+    apt-get update && apt-get install --no-install-recommends -y ca-certificates python3 python3-setuptools tigervnc-standalone-server supervisor openssh-client xauth tigervnc-common wget vim tzdata firefox
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
     dpkg-reconfigure --frontend noninteractive tzdata
     apt-get install -y --no-install-recommends \
@@ -59,40 +60,26 @@ tar xvf v1.2.0.tar.gz
     mv /services.conf /etc/supervisor/conf.d/services.conf
     mv /supervisor.conf /etc/supervisor/supervisord.conf
     mv /xfcestart.sh /usr/local/bin/
-    chmod +x /usr/local/bin/xfcestart.sh
     mv /Xvncstart.sh /usr/local/bin/
+    mv /get_ice_session.py /usr/local/bin/
+
     chmod +x /usr/local/bin/xfcestart.sh
     chmod +x /usr/local/bin/Xvncstart.sh
+    chmod +x /usr/local/bin/get_ice_session.py
+
     mkdir /cwd
     mv /session-manager-export.desktop /etc/xdg/autostart/
     mkdir /TMPDIR
 
+
 %runscript
 #!/bin/bash
 
+    #Helper Functuions
     function usage(){
       echo "usage: singularity run --bind $(pwd):/cwd --bind $TMPDIR:/TMPDIR /path/to/sif/file.sif [-d \"displayname\"]"
       exit
     }
-
-    while getopts "d:h" option; do
-      case ${option} in
-      d )
-      export DISPLAYNAME="${$OPTARG}"
-      ;;
-      \? )
-      usage
-      ;;
-      h )
-      usage
-      ;;
-      esac
-    done
-
-    export PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w8 | head -n 1)
-    export SUPERVISORD_PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w12 | head -n 1)
-    export PYTHONPATH=/usr/local/lib/python3.8/dist-packages/websockify-0.9.0-py3.8.egg
-    export DISPLAYNAME=${DISPLAYNAME:-$(hostname)}
 
     function cleanup() {
       sleep 1
@@ -106,6 +93,7 @@ tar xvf v1.2.0.tar.gz
         rm -f "/tmp/.X11-unix/X$DISPLAY_NUM"
       fi
       if [ -n "${SESSION_MANAGER}" ]; then
+        ICESOCKET="$(get_ice_session.py)"
         if [ -n "${ICESOCKET}" ] && [ -e "$ICESOCKET" ]; then
           echo  "Removing ICE socket...$ICESOCKET"
           rm -f "$ICESOCKET"
@@ -115,17 +103,37 @@ tar xvf v1.2.0.tar.gz
       exit
     }
 
+    # Command line argument parsing
+    while getopts "d:h" option; do
+      case ${option} in
+      d )
+      export DISPLAYNAME="${OPTARG}"
+      ;;
+      \? )
+      usage
+      ;;
+      h )
+      usage
+      ;;
+      esac
+    done
+
+    # Script setup
     trap cleanup INT
     echo $$ > /TMPDIR/runscript.pid
     
+    # Directory setup
     mkdir -p /TMPDIR/runtime
     chmod 700 /TMPDIR/runtime
     touch /TMPDIR/.Xauthority
 
+    # Local Variables
     PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w8 | head -n 1)
     SUPERVISORD_PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w12 | head -n 1)
     PYTHONPATH=/usr/local/lib/python3.8/dist-packages/websockify-0.9.0-py3.8.egg
     DISPLAYNAME=${DISPLAYNAME:-$(hostname)}
+
+    # Exported variables
     export XDG_CONFIG_HOME="/TMPDIR"
     export XDG_CACHE_HOME="/TMPDIR"
     export XDG_RUNTIME_DIR="/TMPDIR/runtime"
@@ -134,8 +142,11 @@ tar xvf v1.2.0.tar.gz
     export SUPERVISORD_PASSWORD
     export XAUTHORITY=/TMPDIR/.Xauthority
     export ICEAUTHORITY=/TMPDIR/.ICEauthority
+
+    # Set VNC password
     bash -c "printf \"%s\n%s\n\n\" $PASSWORD $PASSWORD | vncpasswd /TMPDIR/.vncpasswd"  &> /dev/null
 
+    # Start Supervisord to manage background tasks
     supervisord -n &> /dev/null &
 
     # shellcheck disable=SC2034
@@ -150,6 +161,8 @@ tar xvf v1.2.0.tar.gz
     echo "Timeout waiting for supervisord to start"
     cleanup
     done
+
+    # Start background tasks
 
     supervisorctl start Xvnc
     # shellcheck disable=SC2034
@@ -199,6 +212,7 @@ tar xvf v1.2.0.tar.gz
     cleanup
     done
 
+    # Display connection detains on command line
     CONNECTION_STRING="https://ood.arc.vt.edu/rnode/$(hostname)/$NOVNC_PORT/vnc.html?autoconnect=true&port=$NOVNC_PORT&host=ood.arc.vt.edu/rnode/$(hostname)/$NOVNC_PORT&password=$PASSWORD"
     printf "X server listening on :%s\n" "$DISPLAY_NUM"
     printf "XAUTHORITY=%s ICEAUTHORITY=%s SESSION_MANAGER=%s DISPLAY=:%s\n\n" "$XAUTHORITY" "$ICEAUTHORITY" "$SESSION_MANAGER" "$DISPLAY_NUM"
@@ -206,6 +220,7 @@ tar xvf v1.2.0.tar.gz
     printf "Logs and sockets stored in %s\n" '/$TMPDIR/'
     printf "Connect to %s\n\n" "$CONNECTION_STRING"
 
+    # Write connection details to bash sourcable connection.rc file
     if [ -w "/cwd" ]; then
     {
       printf "export NOVNC_PORT=\"%s\"\n" "$NOVNC_PORT"
@@ -225,6 +240,7 @@ tar xvf v1.2.0.tar.gz
       echo "Add bind mount to /cwd from a writable directory to export connection.rc with bash sourceable details about this container, ex. 'singularity run --cleanenv --env PYTHONPATH=/usr/local/lib/python3.8/dist-packages/websockify-0.9.0-py3.8.egg --bind \`pwd\`:/cwd ubuntu-xfce.sif'";
     fi
 
+    # Wait for exit and then cleanup extra files
     printf "Waiting for supervisord to exit \n\nTo manually stop either:\n - Run 'kill -s SIGINT %s'\n - Log out of the windowmanager in the novnc session \n - Press CTRL+C in this terminal\n" "$(cat /TMPDIR/supervisord.pid)"
     wait "$(cat /TMPDIR/supervisord.pid)"
     cleanup
