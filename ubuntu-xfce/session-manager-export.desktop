@@ -2,6 +2,6 @@
 Encoding=UTF-8
 Name=session-manager=export
 Comment=for ICE cleanup
-Exec=bash -c 'echo export SESSION_MANAGER=$SESSION_MANAGER > "/tmp/$INSTANCE_ID/session.rc"'
+Exec=bash -c 'echo export SESSION_MANAGER=$SESSION_MANAGER > "/TMPDIR/session.rc"'
 Terminal=true
 Type=Application
