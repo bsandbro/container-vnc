@@ -69,9 +69,29 @@ tar xvf v1.2.0.tar.gz
 %runscript
 #!/bin/bash
 
+    function usage(){
+      echo "usage: singularity run --bind `pwd`:/cwd --bind $TMPDIR:/TMPDIR /path/to/sif/file.sif [-d \"displayname\"]"
+      exit
+    }
+
+    while getopts "d:h" option; do
+      case ${option} in
+      d )
+      export DISPLAYNAME="${$OPTARG}"
+      ;;
+      \? )
+      usage
+      ;;
+      h )
+      usage
+      ;;
+      esac
+    done
+
     export PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w8 | head -n 1)
     export SUPERVISORD_PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w12 | head -n 1)
     export PYTHONPATH=/usr/local/lib/python3.8/dist-packages/websockify-0.9.0-py3.8.egg
+    export DISPLAYNAME=${DISPLAYNAME:-$(hostname)}
 
     function cleanup() {
       sleep 1

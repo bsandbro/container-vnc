@@ -1,5 +1,22 @@
 #!/bin/bash
 
+while getopts "d:" option; do
+    case ${option} in
+    d )
+    export DISPLAYNAME="${OPTARG// /_}"
+    ;;
+    \? )
+    echo "usage: Xvnctart.sh [-d displayname]"
+    exit
+    ;;
+    esac
+done
+
 exec 6<> /TMPDIR/.Xdisplaynum
 
-Xvnc -nolisten tcp -rfbunixpath=/TMPDIR/.vncsocket -auth /TMPDIR/.Xauthority -rfbauth /TMPDIR/.vncpasswd -displayfd 6
+Xvnc -nolisten tcp \
+     -rfbunixpath=/TMPDIR/.vncsocket \
+     -auth /TMPDIR/.Xauthority \
+     -rfbauth /TMPDIR/.vncpasswd \
+     -displayfd 6 \
+     $([[ -v DISPLAYNAME ]] && printf -- "-desktop %s" $DISPLAYNAME)
