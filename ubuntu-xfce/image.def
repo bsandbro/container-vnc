@@ -3,13 +3,13 @@ From: ubuntu:20.04
 Stage: build
 
 %setup
-mkdir -p ${SINGULARITY_ROOTFS}/opt
-cd ${SINGULARITY_ROOTFS}/opt
+mkdir -p "${SINGULARITY_ROOTFS}"/opt
+cd "${SINGULARITY_ROOTFS}"/opt
 git clone https://github.com/delta9000/websockify.git
-cd websockify
-git checkout port_file_feature
-cd ${SINGULARITY_ROOTFS}/opt
-wget https://github.com/novnc/noVNC/archive/refs/tags/v1.2.0.tar.gz
+cd websockify || exit
+git checkout port_file_feature || exit
+cd "${SINGULARITY_ROOTFS}"/opt
+wget https://github.com/novnc/noVNC/archive/refs/tags/v1.2.0.tar.gz || exit
 tar xvf v1.2.0.tar.gz
 
 %files
@@ -51,8 +51,9 @@ tar xvf v1.2.0.tar.gz
       xubuntu-icon-theme \
       libxv1 \
       libqt5gui5 \
-      qpdfview
-    cd /opt/websockify
+      qpdfview \
+      shellcheck 
+    cd /opt/websockify || exit
     python3 setup.py install
     echo "export BUILD_DATE=\"$(date -R)\"" >> $SINGULARITY_ENVIRONMENT
     mv /services.conf /etc/supervisor/conf.d/services.conf
@@ -70,7 +71,7 @@ tar xvf v1.2.0.tar.gz
 #!/bin/bash
 
     function usage(){
-      echo "usage: singularity run --bind `pwd`:/cwd --bind $TMPDIR:/TMPDIR /path/to/sif/file.sif [-d \"displayname\"]"
+      echo "usage: singularity run --bind $(pwd):/cwd --bind $TMPDIR:/TMPDIR /path/to/sif/file.sif [-d \"displayname\"]"
       exit
     }
 
@@ -98,15 +99,14 @@ tar xvf v1.2.0.tar.gz
       printf '\nCleaning up...\n'
       if [ -f "/TMPDIR/supervisord.pid" ]; then
         echo  "Killing supervisord..."
-        kill -s SIGTERM $(cat "/TMPDIR/supervisord.pid")
+        kill -s SIGTERM "$(cat "/TMPDIR/supervisord.pid")"
       fi
-      if [ ! -z "${DISPLAY_NUM}" ] && [ -e /tmp/.X11-unix/X$DISPLAY_NUM ]; then
+      if [ -n "${DISPLAY_NUM}" ] && [ -e /tmp/.X11-unix/X"$DISPLAY_NUM" ]; then
         echo  "Removing X socket..."
         rm -f "/tmp/.X11-unix/X$DISPLAY_NUM"
       fi
-      if [ ! -z "${SESSION_MANAGER}" ]; then
-        export ICESOCKET="$(python3 -c $'import re,os,sys\nm=re.search(r"(?<!\@)\/tmp\/.ICE-unix\/\d*", os.getenv("SESSION_MANAGER"))\nif m is not None:\n\tprint(m.group(0))\n\tsys.exit(0)\nelse:\n\tsys.exit(1)')"
-        if [ ! -z "${ICESOCKET}" ] && [ -e "$ICESOCKET" ]; then
+      if [ -n "${SESSION_MANAGER}" ]; then
+        if [ -n "${ICESOCKET}" ] && [ -e "$ICESOCKET" ]; then
           echo  "Removing ICE socket...$ICESOCKET"
           rm -f "$ICESOCKET"
         fi
@@ -116,27 +116,29 @@ tar xvf v1.2.0.tar.gz
     }
 
     trap cleanup INT
-
+    echo $$ > /TMPDIR/runscript.pid
+    
     mkdir -p /TMPDIR/runtime
     chmod 700 /TMPDIR/runtime
+    touch /TMPDIR/.Xauthority
 
+    PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w8 | head -n 1)
+    SUPERVISORD_PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w12 | head -n 1)
+    PYTHONPATH=/usr/local/lib/python3.8/dist-packages/websockify-0.9.0-py3.8.egg
+    DISPLAYNAME=${DISPLAYNAME:-$(hostname)}
     export XDG_CONFIG_HOME="/TMPDIR"
     export XDG_CACHE_HOME="/TMPDIR"
     export XDG_RUNTIME_DIR="/TMPDIR/runtime"
     export XDG_DATA_HOME="/TMPDIR"
-
-    touch /TMPDIR/.Xauthority
+    export PYTHONPATH
+    export SUPERVISORD_PASSWORD
     export XAUTHORITY=/TMPDIR/.Xauthority
     export ICEAUTHORITY=/TMPDIR/.ICEauthority
-    echo $$ > /TMPDIR/runscript.pid
-    bash -c 'printf "%s\n%s\n\n" $PASSWORD $PASSWORD | vncpasswd /TMPDIR/.vncpasswd'  &> /dev/null ||
-    if [ $? -ne 0 ]; then
-      echo "Error setting password, must be at least 6 characters"
-      exit 1
-    fi
+    bash -c "printf \"%s\n%s\n\n\" $PASSWORD $PASSWORD | vncpasswd /TMPDIR/.vncpasswd"  &> /dev/null
 
     supervisord -n &> /dev/null &
 
+    # shellcheck disable=SC2034
     for i in {1..20}
       do
       if [ -e /TMPDIR/supervisor.sock ]; then
@@ -150,13 +152,13 @@ tar xvf v1.2.0.tar.gz
     done
 
     supervisorctl start Xvnc
-
+    # shellcheck disable=SC2034
     for i in {1..20}
       do
       if [ -f /TMPDIR/.Xdisplaynum ] &&  [ -e /TMPDIR/.vncsocket ]; then
         sleep 2
-        export DISPLAY_NUM=$(cat /TMPDIR/.Xdisplaynum | tr -d '\n')
-        xauth add :$DISPLAY_NUM . $(xxd -l 16 -p /dev/urandom)
+        DISPLAY_NUM=$(tr -d '\n' < /TMPDIR/.Xdisplaynum )
+        xauth add :"$DISPLAY_NUM" . "$(xxd -l 16 -p /dev/urandom)"
         break
       else
         sleep 1
@@ -167,11 +169,11 @@ tar xvf v1.2.0.tar.gz
     done
 
     supervisorctl start websockify
-
+    # shellcheck disable=SC2034
     for i in {1..20}
       do
       if [ -f /TMPDIR/.novncport ]; then
-        export NOVNC_PORT=$(cat /TMPDIR/.novncport)
+        NOVNC_PORT=$(cat /TMPDIR/.novncport)
         break
       else
         sleep 1
@@ -182,10 +184,11 @@ tar xvf v1.2.0.tar.gz
     done
 
     supervisorctl start xfce
-
+    # shellcheck disable=SC2034
     for i in {1..20}
       do
       if [ -d /TMPDIR/xfce4 ] && [ -f /TMPDIR/session.rc ]; then
+        # shellcheck disable=SC1091
         source /TMPDIR/session.rc
         break
       else
@@ -196,39 +199,50 @@ tar xvf v1.2.0.tar.gz
     cleanup
     done
 
-    export CONNECTION_STRING="https://ood.arc.vt.edu/rnode/$(hostname)/$NOVNC_PORT/vnc.html?autoconnect=true&port=$NOVNC_PORT&host=ood.arc.vt.edu/rnode/$(hostname)/$NOVNC_PORT&password=$PASSWORD"
-    printf "X server listening on :%s\n" $DISPLAY_NUM
-    printf "XAUTHORITY=%s ICEAUTHORITY=%s SESSION_MANAGER=%s DISPLAY=:%s\n\n" $XAUTHORITY $ICEAUTHORITY $SESSION_MANAGER $DISPLAY_NUM
+    CONNECTION_STRING="https://ood.arc.vt.edu/rnode/$(hostname)/$NOVNC_PORT/vnc.html?autoconnect=true&port=$NOVNC_PORT&host=ood.arc.vt.edu/rnode/$(hostname)/$NOVNC_PORT&password=$PASSWORD"
+    printf "X server listening on :%s\n" "$DISPLAY_NUM"
+    printf "XAUTHORITY=%s ICEAUTHORITY=%s SESSION_MANAGER=%s DISPLAY=:%s\n\n" "$XAUTHORITY" "$ICEAUTHORITY" "$SESSION_MANAGER" "$DISPLAY_NUM"
+    # shellcheck disable=SC2016
     printf "Logs and sockets stored in %s\n" '/$TMPDIR/'
-    printf "Connect to %s\n\n" $CONNECTION_STRING
+    printf "Connect to %s\n\n" "$CONNECTION_STRING"
 
     if [ -w "/cwd" ]; then
-      printf "export NOVNC_PORT=\"%s\"\n" $NOVNC_PORT > /cwd/connection.rc
-      printf "export CONNECTION_STRING=\"%s\"\n" $CONNECTION_STRING >> /cwd/connection.rc
-      printf "export DISPLAY=\":%s\"\n" $DISPLAY_NUM >> /cwd/connection.rc
-      printf "export XAUTHORITY=\"%s\"\n" '$TMPDIR/.Xauthority' >> /cwd/connection.rc
-      printf "export ICEAUTHORITY=\"%s\"\n" '$TMPDIR/.ICEauthority' >> /cwd/connection.rc
-      printf "export SESSION_MANAGER=\"%s\"\n" $SESSION_MANAGER >> /cwd/connection.rc
-      printf "export password=\"%s\"\n" $PASSWORD >> /cwd/connection.rc
-      printf "export hostname=\"%s\"\n" $(hostname) >> /cwd/connection.rc
-      printf "export port=\"%s\"\n" $NOVNC_PORT >> /cwd/connection.rc
+    {
+      printf "export NOVNC_PORT=\"%s\"\n" "$NOVNC_PORT"
+      printf "export CONNECTION_STRING=\"%s\"\n" "$CONNECTION_STRING" 
+      printf "export DISPLAY=\":%s\"\n" "$DISPLAY_NUM"
+      # shellcheck disable=SC2016
+      printf "export XAUTHORITY=\"%s\"\n" '$TMPDIR/.Xauthority'
+      # shellcheck disable=SC2016
+      printf "export ICEAUTHORITY=\"%s\"\n" '$TMPDIR/.ICEauthority'
+      printf "export SESSION_MANAGER=\"%s\"\n" "$SESSION_MANAGER"
+      printf "export password=\"%s\"\n" "$PASSWORD"
+      printf "export hostname=\"%s\"\n" "$(hostname)"
+      printf "export port=\"%s\"\n" "$NOVNC_PORT"
+    } >> /cwd/connection.rc
       echo "Wrote connection.rc to the /cwd bind mount"
     else
       echo "Add bind mount to /cwd from a writable directory to export connection.rc with bash sourceable details about this container, ex. 'singularity run --cleanenv --env PYTHONPATH=/usr/local/lib/python3.8/dist-packages/websockify-0.9.0-py3.8.egg --bind \`pwd\`:/cwd ubuntu-xfce.sif'";
     fi
 
-    printf "Waiting for supervisord to exit \n\nTo manually stop either:\n - Run 'kill -s SIGINT %s'\n - Log out of the windowmanager in the novnc session \n - Press CTRL+C in this terminal\n" $(cat /TMPDIR/supervisord.pid)
-
-    wait $(cat /TMPDIR/supervisord.pid)
+    printf "Waiting for supervisord to exit \n\nTo manually stop either:\n - Run 'kill -s SIGINT %s'\n - Log out of the windowmanager in the novnc session \n - Press CTRL+C in this terminal\n" "$(cat /TMPDIR/supervisord.pid)"
+    wait "$(cat /TMPDIR/supervisord.pid)"
     cleanup
 
-%test
-    grep -q NAME=\"Ubuntu\" /etc/os-release
-    if [ $? -eq 0 ]; then
+%test 
+    if grep -q NAME=\"Ubuntu\" /etc/os-release; then
         echo "Container base is Ubuntu as expected."
     else
         echo "Container base is not Ubuntu."
     fi
+    
+    CHECK_SCRIPT="/singularity /usr/local/bin/xfcestart.sh /usr/local/bin/Xvncstart.sh"
+    if shellcheck $CHECK_SCRIPT; then
+        echo "$CHECK_SCRIPT passed shellcheck"
+    else
+      echo "Scripts did not pass shellcheck"
+    fi
+    exit 0
 
 %labels
     Author bsandbro@vt.edu

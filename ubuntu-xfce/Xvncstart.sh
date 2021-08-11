@@ -1,9 +1,10 @@
 #!/bin/bash
+# shellcheck disable=SC2046
 
 while getopts "d:" option; do
     case ${option} in
     d )
-    export DISPLAYNAME="${OPTARG// /_}"
+    DISPLAYNAME="${OPTARG// /_}"
     ;;
     \? )
     echo "usage: Xvnctart.sh [-d displayname]"
@@ -19,4 +20,4 @@ Xvnc -nolisten tcp \
      -auth /TMPDIR/.Xauthority \
      -rfbauth /TMPDIR/.vncpasswd \
      -displayfd 6 \
-     $([[ -v DISPLAYNAME ]] && printf -- "-desktop %s" $DISPLAYNAME)
+     $([[ -v DISPLAYNAME ]] && printf -- "-desktop %s" "$DISPLAYNAME")
