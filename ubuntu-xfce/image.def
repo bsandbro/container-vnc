@@ -169,7 +169,7 @@ tar xvf v1.2.0.tar.gz
     for i in {1..20}
       do
       if [ -f /TMPDIR/.Xdisplaynum ] &&  [ -e /TMPDIR/.vncsocket ]; then
-        sleep 2
+        sleep 5
         DISPLAY_NUM=$(tr -d '\n' < /TMPDIR/.Xdisplaynum )
         xauth add :"$DISPLAY_NUM" . "$(xxd -l 16 -p /dev/urandom)"
         break
