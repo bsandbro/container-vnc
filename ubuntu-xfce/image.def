@@ -79,7 +79,7 @@ tar xvf v1.2.0.tar.gz
       echo "usage: singularity run --bind $(pwd):/cwd --bind $TMPDIR:/TMPDIR /path/to/sif/file.sif [-d \"displayname\"]"
       exit
     }
-
+    function isint() { case $1 in ''|*[!0-9]*) return 1;;esac;}
     function cleanup() {
       sleep 1
       printf '\nCleaning up...\n'
@@ -123,14 +123,13 @@ tar xvf v1.2.0.tar.gz
     echo $$ > "$TMPDIR"/runscript.pid
     
     # Directory setup
-    mkdir -p /TMPDIR/runtime
-    chmod 700 /TMPDIR/runtime
-    touch /TMPDIR/.Xauthority
+    mkdir -p "$TMPDIR"/runtime
+    chmod 700 "$TMPDIR"/runtime
+    touch "$TMPDIR"/.Xauthority
 
     # Local Variables
     PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w8 | head -n 1)
     SUPERVISORD_PASSWORD=$(tr -cd '[:alnum:]' < /dev/urandom | fold -w12 | head -n 1)
-    PYTHONPATH=/usr/local/lib/python3.8/dist-packages/websockify-0.9.0-py3.8.egg
     DISPLAYNAME=${DISPLAYNAME:-$(hostname)}
 
     # Exported variables
@@ -170,9 +169,10 @@ tar xvf v1.2.0.tar.gz
     # shellcheck disable=SC2034
     for i in {1..20}
       do
-      if [ -f /TMPDIR/.Xdisplaynum ] &&  [ -e /TMPDIR/.vncsocket ]; then
-        sleep 5
-        DISPLAY_NUM=$(tr -d '\n' < /TMPDIR/.Xdisplaynum )
+      if [ -f "$TMPDIR"/.Xdisplaynum ] && \
+         [ -e "$TMPDIR"/.vncsocket ] && \
+         DISPLAY_NUM=$(tr -d '\n' < "$TMPDIR"/.Xdisplaynum ) && \
+         isint "$DISPLAY_NUM" ; then
         xauth add :"$DISPLAY_NUM" . "$(xxd -l 16 -p /dev/urandom)"
         break
       else
