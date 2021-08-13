@@ -83,9 +83,9 @@ tar xvf v1.2.0.tar.gz
     function cleanup() {
       sleep 1
       printf '\nCleaning up...\n'
-      if [ -f "/TMPDIR/supervisord.pid" ]; then
+      if [ -f "$TMPDIR"/supervisord.pid ]; then
         echo  "Killing supervisord..."
-        kill -s SIGTERM "$(cat "/TMPDIR/supervisord.pid")"
+        kill -s SIGTERM "$(cat "$TMPDIR"/supervisord.pid)"
       fi
       if [ -n "${DISPLAY_NUM}" ] && [ -e /tmp/.X11-unix/X"$DISPLAY_NUM" ]; then
         echo  "Removing X socket..."
@@ -116,10 +116,11 @@ tar xvf v1.2.0.tar.gz
       ;;
       esac
     done
+    export TMPDIR=/TMPDIR
 
     # Script setup
     trap cleanup INT
-    echo $$ > /TMPDIR/runscript.pid
+    echo $$ > "$TMPDIR"/runscript.pid
     
     # Directory setup
     mkdir -p /TMPDIR/runtime
@@ -133,17 +134,19 @@ tar xvf v1.2.0.tar.gz
     DISPLAYNAME=${DISPLAYNAME:-$(hostname)}
 
     # Exported variables
-    export XDG_CONFIG_HOME="/TMPDIR"
-    export XDG_CACHE_HOME="/TMPDIR"
-    export XDG_RUNTIME_DIR="/TMPDIR/runtime"
-    export XDG_DATA_HOME="/TMPDIR"
-    export PYTHONPATH
+    export XDG_CONFIG_HOME="$TMPDIR"
+    export XDG_CACHE_HOME="$TMPDIR"
+    export XDG_RUNTIME_DIR="$TMPDIR"/runtime
+    export XDG_DATA_HOME="$TMPDIR"
+    export XAUTHORITY="$TMPDIR"/.Xauthority
+    export ICEAUTHORITY="$TMPDIR"/.ICEauthority
+    export PYTHONPATH=/usr/local/lib/python3.8/dist-packages/websockify-0.9.0-py3.8.egg
+    
     export SUPERVISORD_PASSWORD
-    export XAUTHORITY=/TMPDIR/.Xauthority
-    export ICEAUTHORITY=/TMPDIR/.ICEauthority
+    export PASSWORD
 
     # Set VNC password
-    bash -c "printf \"%s\n%s\n\n\" $PASSWORD $PASSWORD | vncpasswd /TMPDIR/.vncpasswd"  &> /dev/null
+    bash -c 'printf "%s\n%s\n\n" $PASSWORD $PASSWORD | vncpasswd "$TMPDIR"/.vncpasswd'  &> /dev/null
 
     # Start Supervisord to manage background tasks
     supervisord -n &> /dev/null &
@@ -151,7 +154,7 @@ tar xvf v1.2.0.tar.gz
     # shellcheck disable=SC2034
     for i in {1..20}
       do
-      if [ -e /TMPDIR/supervisor.sock ]; then
+      if [ -e "$TMPDIR"/supervisor.sock ]; then
         break
       else
         sleep 1
@@ -184,8 +187,8 @@ tar xvf v1.2.0.tar.gz
     # shellcheck disable=SC2034
     for i in {1..20}
       do
-      if [ -f /TMPDIR/.novncport ]; then
-        NOVNC_PORT=$(cat /TMPDIR/.novncport)
+      if [ -f "$TMPDIR"/.novncport ]; then
+        NOVNC_PORT=$(cat "$TMPDIR"/.novncport)
         break
       else
         sleep 1
@@ -199,9 +202,9 @@ tar xvf v1.2.0.tar.gz
     # shellcheck disable=SC2034
     for i in {1..20}
       do
-      if [ -d /TMPDIR/xfce4 ] && [ -f /TMPDIR/session.rc ]; then
-        # shellcheck disable=SC1091
-        source /TMPDIR/session.rc
+      if [ -d "$TMPDIR"/xfce4 ] && [ -f "$TMPDIR"/session.rc ]; then
+        # shellcheck disable=SC1090
+        source "$TMPDIR"/session.rc
         break
       else
         sleep 1
@@ -240,8 +243,8 @@ tar xvf v1.2.0.tar.gz
     fi
 
     # Wait for exit and then cleanup extra files
-    printf "Waiting for supervisord to exit \n\nTo manually stop either:\n - Run 'kill -s SIGINT %s'\n - Log out of the windowmanager in the novnc session \n - Press CTRL+C in this terminal\n" "$(cat /TMPDIR/supervisord.pid)"
-    wait "$(cat /TMPDIR/supervisord.pid)"
+    printf "Waiting for supervisord to exit \n\nTo manually stop either:\n - Run 'kill -s SIGINT %s'\n - Log out of the windowmanager in the novnc session \n - Press CTRL+C in this terminal\n" "$(cat "$TMPDIR"/supervisord.pid)"
+    wait "$(cat "$TMPDIR"/supervisord.pid)"
     cleanup
 
 %test 
