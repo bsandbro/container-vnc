@@ -215,7 +215,7 @@ tar xvf v1.2.0.tar.gz
     done
 
     # Display connection detains on command line
-    CONNECTION_STRING="https://ood.arc.vt.edu/rnode/$(hostname)/$NOVNC_PORT/vnc.html?autoconnect=true&port=$NOVNC_PORT&host=ood.arc.vt.edu/rnode/$(hostname)/$NOVNC_PORT&password=$PASSWORD"
+    CONNECTION_STRING="vnc.html?autoconnect=true&port=$NOVNC_PORT&password=$PASSWORD&resize=remote"
     printf "X server listening on :%s\n" "$DISPLAY_NUM"
     printf "XAUTHORITY=%s ICEAUTHORITY=%s SESSION_MANAGER=%s DISPLAY=:%s\n\n" "$XAUTHORITY" "$ICEAUTHORITY" "$SESSION_MANAGER" "$DISPLAY_NUM"
     # shellcheck disable=SC2016
