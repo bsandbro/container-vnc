@@ -5,7 +5,7 @@ Stage: build
 %setup
 mkdir -p "${SINGULARITY_ROOTFS}"/opt
 cd "${SINGULARITY_ROOTFS}"/opt
-git clone https://github.com/delta9000/websockify.git
+git clone https://github.com/bsandbro/websockify.git
 cd websockify || exit
 cd "${SINGULARITY_ROOTFS}"/opt
 wget https://github.com/novnc/noVNC/archive/refs/tags/v1.2.0.tar.gz || exit
