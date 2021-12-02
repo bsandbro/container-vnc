@@ -225,7 +225,7 @@ tar xvf v1.2.0.tar.gz
       printf "Connect to http://%s:%s/%s\n\n" $ip $NOVNC_PORT "$CONNECTION_STRING"
     done
 
-    # Write connection details to bash sourcable connection.rc file
+    # Write connection details to bash sourcable connection.rc file, make sure $TMPDIR resolves to the bound tmpdir outside the container
     if [ -w "/cwd" ]; then
     {
       printf "export NOVNC_PORT=\"%s\"\n" "$NOVNC_PORT"
@@ -239,7 +239,7 @@ tar xvf v1.2.0.tar.gz
       printf "export password=\"%s\"\n" "$PASSWORD"
       printf "export hostname=\"%s\"\n" "$(hostname)"
       printf "export port=\"%s\"\n" "$NOVNC_PORT"
-    } >> /cwd/connection.rc
+    } > /cwd/connection.rc
       echo "Wrote connection.rc to the /cwd bind mount"
     else
       echo "Add bind mount to /cwd from a writable directory to export connection.rc with bash sourceable details about this container, ex. 'singularity run --cleanenv --env PYTHONPATH=/usr/local/lib/python3.8/dist-packages/websockify-0.9.0-py3.8.egg --bind \`pwd\`:/cwd ubuntu-xfce.sif'";
