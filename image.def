@@ -220,7 +220,10 @@ tar xvf v1.2.0.tar.gz
     printf "XAUTHORITY=%s ICEAUTHORITY=%s SESSION_MANAGER=%s DISPLAY=:%s\n\n" "$XAUTHORITY" "$ICEAUTHORITY" "$SESSION_MANAGER" "$DISPLAY_NUM"
     # shellcheck disable=SC2016
     printf "Logs and sockets stored in %s\n" '/$TMPDIR/'
-    printf "Connect to %s\n\n" "$CONNECTION_STRING"
+    for ip in $(hostname -I)
+      do
+      printf "Connect to http://%s:%s/%s\n\n" $ip $NOVNC_PORT "$CONNECTION_STRING"
+    done
 
     # Write connection details to bash sourcable connection.rc file
     if [ -w "/cwd" ]; then
